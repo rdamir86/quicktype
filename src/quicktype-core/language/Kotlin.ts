@@ -321,6 +321,12 @@ export class KotlinRenderer extends ConvenienceRenderer {
         };
 
         this.emitDescription(this.descriptionForType(c));
+
+        const annotation = this.classAnnotation();
+        if (annotation !== undefined) {
+            this.emitLine(annotation);
+        }
+
         this.emitLine("data class ", className, " (");
         this.indent(() => {
             let count = c.getProperties().size;
@@ -361,6 +367,10 @@ export class KotlinRenderer extends ConvenienceRenderer {
 
     protected emitClassDefinitionMethods(_c: ClassType, _className: Name) {
         this.emitLine(")");
+    }
+
+    protected classAnnotation(): string | undefined {
+        return undefined;
     }
 
     protected renameAttribute(_name: Name, _jsonName: string, _required: boolean, _meta: Array<() => void>) {
@@ -1009,6 +1019,13 @@ export class KotlinMoshiRenderer extends KotlinRenderer {
         this.emitLine("import com.squareup.moshi.JsonClass");
     }
 
-    // TODO add class annotations
+    protected classAnnotation(): string | undefined {
+        return "@JsonClass(generateAdapter = true)";
+    }
+
+    protected renameAttribute(_name: Name, _jsonName: string, _required: boolean, _meta: Array<() => void>) {
+        // to be overridden
+    }
+
     // TODO add field annotations
 }
