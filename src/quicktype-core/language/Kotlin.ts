@@ -3,7 +3,7 @@ import { iterableSome, arrayIntercalate } from "collection-utils";
 import { anyTypeIssueAnnotation, nullTypeIssueAnnotation } from "../Annotation";
 import { ConvenienceRenderer, ForbiddenWordsInfo } from "../ConvenienceRenderer";
 import { Name, Namer, funPrefixNamer } from "../Naming";
-import { EnumOption, Option, StringOption, OptionValues, getOptionValues } from "../RendererOptions";
+import { EnumOption, Option, StringOption, OptionValues, getOptionValues, BooleanOption } from "../RendererOptions";
 import { Sourcelike, maybeAnnotated, modifySource } from "../Source";
 import {
     allLowerWordStyle,
@@ -50,6 +50,11 @@ export const kotlinOptions = {
         [["just-types", Framework.None], ["jackson", Framework.Jackson], ["klaxon", Framework.Klaxon]],
         "klaxon"
     ),
+    uppercaseEnums: new BooleanOption(
+        "uppercase-enums",
+        "Uppercase underscore-separated names for enum constants",
+        false
+    ),
     packageName: new StringOption("package", "Package", "PACKAGE", "quicktype")
 };
 
@@ -59,7 +64,7 @@ export class KotlinTargetLanguage extends TargetLanguage {
     }
 
     protected getOptions(): Option<any>[] {
-        return [kotlinOptions.framework, kotlinOptions.packageName];
+        return [kotlinOptions.framework, kotlinOptions.uppercaseEnums, kotlinOptions.packageName];
     }
 
     get supportsOptionalClassProperties(): boolean {
@@ -151,16 +156,16 @@ function isStartCharacter(codePoint: number): boolean {
 
 const legalizeName = legalizeCharacters(isPartCharacter);
 
-function kotlinNameStyle(isUpper: boolean, original: string): string {
+function kotlinNameStyle(startWithUpper: boolean, upperUnderscore: boolean, original: string): string {
     const words = splitIntoWords(original);
     return combineWords(
         words,
         legalizeName,
-        isUpper ? firstUpperWordStyle : allLowerWordStyle,
-        firstUpperWordStyle,
-        isUpper ? allUpperWordStyle : allLowerWordStyle,
+        upperUnderscore ? allUpperWordStyle : startWithUpper ? firstUpperWordStyle : allLowerWordStyle,
+        upperUnderscore ? allUpperWordStyle : firstUpperWordStyle,
+        upperUnderscore || startWithUpper ? allUpperWordStyle : allLowerWordStyle,
         allUpperWordStyle,
-        "",
+        upperUnderscore ? "_" : "",
         isStartCharacter
     );
 }
@@ -176,8 +181,8 @@ function stringEscape(s: string): string {
     return _stringEscape(s).replace(/\$/g, "\\$");
 }
 
-const upperNamingFunction = funPrefixNamer("upper", s => kotlinNameStyle(true, s));
-const lowerNamingFunction = funPrefixNamer("lower", s => kotlinNameStyle(false, s));
+const upperNamingFunction = funPrefixNamer("upper", s => kotlinNameStyle(true, false, s));
+const lowerNamingFunction = funPrefixNamer("lower", s => kotlinNameStyle(false, false, s));
 
 export class KotlinRenderer extends ConvenienceRenderer {
     constructor(
@@ -205,7 +210,7 @@ export class KotlinRenderer extends ConvenienceRenderer {
     }
 
     protected topLevelNameStyle(rawName: string): string {
-        return kotlinNameStyle(true, rawName);
+        return kotlinNameStyle(true, false, rawName);
     }
 
     protected makeNamedTypeNamer(): Namer {
@@ -217,11 +222,11 @@ export class KotlinRenderer extends ConvenienceRenderer {
     }
 
     protected makeUnionMemberNamer(): Namer {
-        return funPrefixNamer("upper", s => kotlinNameStyle(true, s) + "Value");
+        return funPrefixNamer("upper", s => kotlinNameStyle(true, false, s) + "Value");
     }
 
     protected makeEnumCaseNamer(): Namer {
-        return upperNamingFunction;
+        return funPrefixNamer("upper", s => kotlinNameStyle(true, this._kotlinOptions.uppercaseEnums, s));
     }
 
     protected emitDescriptionBlock(lines: Sourcelike[]): void {
