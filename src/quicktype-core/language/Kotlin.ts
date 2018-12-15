@@ -1023,9 +1023,19 @@ export class KotlinMoshiRenderer extends KotlinRenderer {
         return "@JsonClass(generateAdapter = true)";
     }
 
-    protected renameAttribute(_name: Name, _jsonName: string, _required: boolean, _meta: Array<() => void>) {
-        // to be overridden
+    protected renameAttribute(_name: Name, jsonName: string, _required: boolean, meta: Array<() => void>) {
+        const rename = this.moshiRenameAttribute(jsonName);
+        if (rename !== undefined) {
+            meta.push(() => this.emitLine(rename));
+        }
     }
 
-    // TODO add field annotations
+    private moshiRenameAttribute(jsonName: string): Sourcelike | undefined {
+        const properties: Sourcelike[] = [];
+        properties.push('@Json(name = "', jsonName, '")');
+        return properties;
+    }
+
+    // TODO add anonotations for enum constants
+    // TODO handle unions
 }
