@@ -1034,6 +1034,18 @@ export class KotlinMoshiRenderer extends KotlinRenderer {
         return properties;
     }
 
-    // TODO add anonotations for enum constants
+    protected emitEnumDefinition(e: EnumType, enumName: Name): void {
+        this.emitDescription(this.descriptionForType(e));
+
+        this.emitBlock(["enum class ", enumName], () => {
+            let count = e.cases.size;
+            this.forEachEnumCase(e, "none", (name, json) => {
+                this.ensureBlankLine();
+                this.emitLine('@Json(name = "', json, '")');
+                this.emitLine(name, --count === 0 ? "" : ",");
+            });
+        });
+    }
+
     // TODO handle unions
 }
