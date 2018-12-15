@@ -1025,12 +1025,10 @@ export class KotlinMoshiRenderer extends KotlinRenderer {
 
     protected renameAttribute(_name: Name, jsonName: string, _required: boolean, meta: Array<() => void>) {
         const rename = this.moshiRenameAttribute(jsonName);
-        if (rename !== undefined) {
-            meta.push(() => this.emitLine(rename));
-        }
+        meta.push(() => this.emitLine(rename));
     }
 
-    private moshiRenameAttribute(jsonName: string): Sourcelike | undefined {
+    private moshiRenameAttribute(jsonName: string): Sourcelike {
         const properties: Sourcelike[] = [];
         properties.push('@Json(name = "', jsonName, '")');
         return properties;
