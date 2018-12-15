@@ -40,14 +40,20 @@ import { RenderContext } from "../Renderer";
 export enum Framework {
     None,
     Jackson,
-    Klaxon
+    Klaxon,
+    Moshi
 }
 
 export const kotlinOptions = {
     framework: new EnumOption(
         "framework",
         "Serialization framework",
-        [["just-types", Framework.None], ["jackson", Framework.Jackson], ["klaxon", Framework.Klaxon]],
+        [
+            ["just-types", Framework.None],
+            ["jackson", Framework.Jackson],
+            ["klaxon", Framework.Klaxon],
+            ["moshi", Framework.Moshi]
+        ],
         "klaxon"
     ),
     uppercaseEnums: new BooleanOption(
@@ -88,6 +94,8 @@ export class KotlinTargetLanguage extends TargetLanguage {
                 return new KotlinJacksonRenderer(this, renderContext, options);
             case Framework.Klaxon:
                 return new KotlinKlaxonRenderer(this, renderContext, options);
+            case Framework.Moshi:
+                return new KotlinMoshiRenderer(this, renderContext, options);
             default:
                 return assertNever(options.framework);
         }
@@ -968,4 +976,39 @@ private fun <T> ObjectMapper.convert(k: kotlin.reflect.KClass<*>, fromJson: (Jso
             this.emitLine("}");
         });
     }
+}
+
+export class KotlinMoshiRenderer extends KotlinRenderer {
+    constructor(
+        targetLanguage: TargetLanguage,
+        renderContext: RenderContext,
+        _kotlinOptions: OptionValues<typeof kotlinOptions>
+    ) {
+        super(targetLanguage, renderContext, _kotlinOptions);
+    }
+
+    protected emitUsageHeader(): void {
+        this.emitLine("// To parse the JSON, install moshi, moshi-kotlin-codegen and do:");
+        this.emitLine("//");
+        this.emitLine("//   val moshi = Moshi.Builder().build()");
+        this.forEachTopLevel("none", (_, name) => {
+            this.emitLine(
+                "//   val ",
+                modifySource(camelCase, name),
+                " = moshi.adapter(",
+                name,
+                "::class.java).fromJson(jsonString)"
+            );
+        });
+    }
+
+    protected emitHeader(): void {
+        super.emitHeader();
+
+        this.emitLine("import com.squareup.moshi.Json");
+        this.emitLine("import com.squareup.moshi.JsonClass");
+    }
+
+    // TODO add class annotations
+    // TODO add field annotations
 }
